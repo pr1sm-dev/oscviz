@@ -1,34 +1,24 @@
 cmake_minimum_required(VERSION 3.28.3)
 
-include(GoogleTest)
-
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-endif()
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(oscviz VERSION 0.1.0 DESCRIPTION "Spherical audio visualizer")
 
+option(OSCVIZ_BUILD_TESTS "Build tests" ON)
+
 find_package(glfw3 3.5 REQUIRED)
 
-add_executable(oscviz)
-target_sources(oscviz
-PRIVATE
-  src/main.cpp
-  src/glad.c
+add_subdirectory(libs)
+add_subdirectory(src)
 
-  src/graphics/shader.cpp
-  src/window/window.cpp
+if(OSCVIZ_BUILD_TESTS)
+  include(FetchContent)
+  FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/cd8e73f067129f8489e35c7b51c7a68552b289d2.zip
+  )
 
-#  imgui/imgui.cpp
-#  imgui/backends/imgui_impl_opengl3.cpp
-)
-
-file(GLOB IMGUI_SOURCES imgui/*.cpp)
-add_library(imgui STATIC ${IMGUI_SOURCES})
-
-target_include_directories(oscviz PRIVATE imgui)
-target_include_directories(oscviz PRIVATE libs)
-target_include_directories(oscviz PRIVATE include)
-
-target_link_libraries(oscviz glfw imgui)
-
+  FetchContent_MakeAvailable(googletest)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
