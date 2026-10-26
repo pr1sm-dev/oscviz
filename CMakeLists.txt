@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.28.3)
 
+include(GoogleTest)
+
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 endif()
@@ -25,6 +27,7 @@ file(GLOB IMGUI_SOURCES imgui/*.cpp)
 add_library(imgui STATIC ${IMGUI_SOURCES})
 
 target_include_directories(oscviz PRIVATE imgui)
+target_include_directories(oscviz PRIVATE libs)
 target_include_directories(oscviz PRIVATE include)
 
 target_link_libraries(oscviz glfw imgui)
