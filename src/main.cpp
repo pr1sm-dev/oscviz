@@ -12,25 +12,11 @@
 #include "imgui/imgui_impl_opengl3.h"
 
 int main() {
-  if (!glfwInit()) {
-    std::cout << "ERROR: Could not initialize GLFW" << std::endl;
-    return -1;
-  }
-  GLFWwindow *window = window::initializeGlfwWindow(1920, 1080, "oscviz");
-  if (!window) {
-    std::cout << "ERROR: Could not create a GLFW window" << std::endl;
-  }
+  window::OscvizWindow window(1920, 1080, "oscviz");
 
   Shader s("shaders/base_vertex.vs", "shaders/base_fragment.fs");
 
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGuiIO &io = ImGui::GetIO();
-  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-  ImGui_ImplGlfw_InitForOpenGL(window, true);
-  ImGui_ImplOpenGL3_Init();
-
-  Sphere sphere(1.0f, 100, 100);
+  Sphere sphere(1.0f, 1000, 100);
 
   GLuint VBO, VAO, EBO;
   glGenBuffers(1, &VBO);
@@ -52,20 +38,24 @@ int main() {
 
   glEnable(GL_DEPTH_TEST);
 
-  while (!glfwWindowShouldClose(window)) {
+  while (!glfwWindowShouldClose(window.GetGLFWWindow())) {
     // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glfwPollEvents();
 
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    ImGui::ShowDemoWindow();
+    float time = glfwGetTime();
 
+    window.RenderUIWindows();
+
+    window::MeshVisualizerState meshState = window.GetMeshVisualizerState();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    float time = glfwGetTime();
     s.Use();
     s.SetFloat("time", time);
+    s.SetFloat("tilt", meshState.tilt);
+    s.SetFloat("amplitude", meshState.amplitude);
+    s.SetFloat("frequency", meshState.frequency);
+    s.SetFloat("verticalOffset", meshState.verticalOffset);
+    s.SetFloat("angularOffset", meshState.angularOffset);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glBindVertexArray(VAO);
@@ -75,13 +65,8 @@ int main() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    glfwSwapBuffers(window);
+    glfwSwapBuffers(window.GetGLFWWindow());
   }
 
-  ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplGlfw_Shutdown();
-  ImGui::DestroyContext();
-
-  glfwTerminate();
   return -1;
 }
