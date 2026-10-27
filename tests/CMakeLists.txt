@@ -1,6 +1,6 @@
 include(GoogleTest)
 
-file(GLOB TEST_SOURCES *.cpp)
+file(GLOB TEST_SOURCES graphics/*.cpp)
 
 add_executable(oscviz_test)
 target_sources(oscviz_test PRIVATE

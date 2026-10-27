@@ -7,6 +7,7 @@ target_include_directories(oscviz_core PUBLIC
 
 target_sources(oscviz_core PRIVATE
   graphics/shader.cpp
+  graphics/sphere.cpp
   window/window.cpp
 )
 
