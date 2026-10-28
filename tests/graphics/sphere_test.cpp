@@ -13,16 +13,16 @@ TEST(Sphere, InvalidParameters) {
 
   Sphere s1(1.0f, 0, 10);
 
-  EXPECT_EQ(s0.GetVertices().size(), 0)
+  EXPECT_EQ(s1.GetVertices().size(), 0)
       << "sphere with 0 latitudes had nonempty vertices";
-  EXPECT_EQ(s0.GetIndices().size(), 0)
+  EXPECT_EQ(s1.GetIndices().size(), 0)
       << "sphere with 0 latitudes had nonempty indicies";
 
   Sphere s2(1.0f, 10, 0);
 
-  EXPECT_EQ(s0.GetVertices().size(), 0)
+  EXPECT_EQ(s2.GetVertices().size(), 0)
       << "sphere with 0 longitudes had nonempty vertices";
-  EXPECT_EQ(s0.GetIndices().size(), 0)
+  EXPECT_EQ(s2.GetIndices().size(), 0)
       << "sphere with 0 latitudes had nonempty indices";
 }
 
