@@ -1,3 +1,4 @@
+#include "audio/engine.hpp"
 #include "glad/glad.h"
 
 #include "GLFW/glfw3.h"
@@ -17,7 +18,11 @@ window::OscvizWindow::OscvizWindow(int width, int height,
   glfwWindow_ = window::initializeGlfwWindow(width, height, name);
   if (!glfwWindow_) {
     std::cout << "ERROR: Could not create a GLFW window" << std::endl;
+
+    glfwTerminate();
+
     throw std::invalid_argument("Failed to create GLFW window");
+    return;
   }
 
   IMGUI_CHECKVERSION();
@@ -52,7 +57,7 @@ void window::OscvizWindow::ShowMeshModeWindow() {
   //     ImGuiCond_FirstUseEver);
   // ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_Always);
 
-  if (!ImGui::Begin("Mesh Configuration", &showUIElements_, 0)) {
+  if (!ImGui::Begin("Mesh Configuration", &renderMeshUI_, 0)) {
     ImGui::End();
     return;
   }
@@ -77,6 +82,48 @@ void window::OscvizWindow::OscvizWindow::ProcessKey(int key, int scancode,
   }
 }
 
+void window::OscvizWindow::OscvizWindow::ShowAudioConfigWindow() {
+  if (!ImGui::Begin("Audio Configuration", &renderAudioConfigUI_, 0)) {
+    ImGui::End();
+    return;
+  }
+
+  int paVersion = audioEngine.GetPortAudioVersion();
+
+  ImGui::Text("PortAudio Version: %d", paVersion);
+  const audio::AudioDevice &currentlySelectedDevice =
+      audioEngine.GetCurrentOutputDevice();
+
+  const std::vector<audio::AudioDevice> &outputAudioDevices =
+      audioEngine.GetOutputDevices();
+
+  for (const audio::AudioDevice &device : outputAudioDevices) {
+    ImGui::Text("%s : default=%d : inputchannels=%d : outputchannels = %d",
+                device.name.c_str(), device.isDefault, device.inputChannels,
+                device.outputChannels);
+    ImGui::Text("\t lowinlatency=%f : highinlatency=%f", device.lowInputLatency,
+                device.highInputLatency);
+    ImGui::Text("\t lowoutlatency=%f : highoutlatency=%f",
+                device.lowOutputLatency, device.highOutputLatency);
+  }
+
+  if (ImGui::BeginCombo("Output Device", currentlySelectedDevice.name.c_str(),
+                        0)) {
+    for (int i = 0; i < outputAudioDevices.size(); i++) {
+      bool isSelected = outputAudioDevices[i].id == currentlySelectedDevice.id;
+      if (ImGui::Selectable(outputAudioDevices[i].name.c_str(), isSelected)) {
+        audioEngine.SetOutputDevice(outputAudioDevices[i].id);
+      }
+
+      if (isSelected)
+        ImGui::SetItemDefaultFocus();
+    }
+    ImGui::EndCombo();
+  }
+
+  ImGui::End();
+}
+
 void window::OscvizWindow::OscvizWindow::RenderUIWindows() {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
@@ -85,6 +132,7 @@ void window::OscvizWindow::OscvizWindow::RenderUIWindows() {
   if (showUIElements_) {
     ImGui::ShowDemoWindow();
     ShowMeshModeWindow();
+    ShowAudioConfigWindow();
   }
 }
 

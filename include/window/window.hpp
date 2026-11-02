@@ -1,5 +1,6 @@
 #pragma once
 
+#include "audio/engine.hpp"
 #include "imgui/imgui.h"
 #include <GLFW/glfw3.h>
 #include <string>
@@ -23,6 +24,7 @@ public:
   GLFWwindow *GetGLFWWindow() { return glfwWindow_; }
 
   void ShowMeshModeWindow();
+  void ShowAudioConfigWindow();
   void ProcessKey(int key, int scancode, int action, int mode);
   void RenderUIWindows();
 
@@ -32,10 +34,13 @@ public:
                               int action, int mode);
 
 private:
+  audio::AudioEngine audioEngine;
   GLFWwindow *glfwWindow_;
   ImGuiIO *imguiIO_;
 
   bool showUIElements_ = true;
+  bool renderMeshUI_ = true;
+  bool renderAudioConfigUI_ = true;
   MeshVisualizerState meshVisualizerState_;
 };
 

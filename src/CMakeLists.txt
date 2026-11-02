@@ -9,9 +9,10 @@ target_sources(oscviz_core PRIVATE
   graphics/shader.cpp
   graphics/sphere.cpp
   window/window.cpp
+  audio/engine.cpp
 )
 
-target_link_libraries(oscviz_core PUBLIC glfw imgui)
+target_link_libraries(oscviz_core PUBLIC glfw imgui PortAudio)
 
 add_executable(oscviz main.cpp)
 target_link_libraries(oscviz oscviz_core)
