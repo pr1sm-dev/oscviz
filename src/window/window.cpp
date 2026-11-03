@@ -7,6 +7,10 @@
 #include "imgui/imgui_impl_opengl3.h"
 #include "window/window.hpp"
 
+#include <cstdio>
+#include <cstring>
+#include <nfd.h>
+
 #include <iostream>
 
 window::OscvizWindow::OscvizWindow(int width, int height,
@@ -119,6 +123,25 @@ void window::OscvizWindow::OscvizWindow::ShowAudioConfigWindow() {
         ImGui::SetItemDefaultFocus();
     }
     ImGui::EndCombo();
+  }
+
+  ImGuiInputTextFlags audioPathFlags =
+      ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_ElideLeft;
+  ImGui::InputText("Path", audioPath_, sizeof(audioPath_), audioPathFlags);
+
+  if (ImGui::SmallButton("Load")) {
+    NFD_Init();
+
+    nfdu8char_t *outPath;
+    nfdopendialogargs_t args = {0};
+
+    nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
+    if (result == NFD_OKAY) {
+      std::snprintf(audioPath_, sizeof(audioPath_), "%s", outPath);
+      NFD_FreePathU8(outPath);
+    }
+
+    NFD_Quit();
   }
 
   ImGui::End();

@@ -38,6 +38,8 @@ private:
   GLFWwindow *glfwWindow_;
   ImGuiIO *imguiIO_;
 
+  char audioPath_[256] = {0};
+
   bool showUIElements_ = true;
   bool renderMeshUI_ = true;
   bool renderAudioConfigUI_ = true;
