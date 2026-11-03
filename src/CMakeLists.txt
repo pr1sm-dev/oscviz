@@ -12,7 +12,7 @@ target_sources(oscviz_core PRIVATE
   audio/engine.cpp
 )
 
-target_link_libraries(oscviz_core PUBLIC glfw imgui PortAudio)
+target_link_libraries(oscviz_core PUBLIC glfw imgui portaudio nfd)
 
 add_executable(oscviz main.cpp)
 target_link_libraries(oscviz oscviz_core)

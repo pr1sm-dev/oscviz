@@ -17,6 +17,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(portaudio)
 
+FetchContent_Declare(
+  nfd
+  GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended
+  GIT_TAG 55a71290f8746cb4ee6f23d275220535cbd15d1a
+)
+FetchContent_MakeAvailable(nfd)
+
 add_subdirectory(libs)
 add_subdirectory(src)
 

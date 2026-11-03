@@ -81,7 +81,7 @@ public:
   const std::size_t size() const { return size_; }
   const std::size_t max_size() const { return N; }
 
-  bool push(const T &value) {
+  bool push(const T &value) noexcept {
     if (is_full()) {
       return false;
     }
@@ -92,7 +92,7 @@ public:
     return true;
   }
 
-  bool pop(T &res) {
+  bool pop(T &res) noexcept {
     if (empty()) {
       return false;
     }
@@ -105,7 +105,7 @@ public:
     return true;
   }
 
-  bool peek(T &res) const {
+  bool peek(T &res) const noexcept {
     if (empty()) {
       return false;
     }
@@ -113,116 +113,18 @@ public:
     return true;
   }
 
-  iterator begin() { return RingBufferIterator(this, 0); }
-  const_iterator begin() const { return RingBufferIterator(this, 0); }
-  const_iterator cbegin() const { return RingBufferIterator(this, 0); }
+  size_t write(const T *data, size_t count) noexcept {
+    assert(data != nullptr);
+    size_t remainingSpace = N - size_;
+    size_t amountToCopy = count <= remainingSpace ? count : remainingSpace;
 
-  iterator end() { return RingBufferIterator(this, size()); }
-  const_iterator end() const { return RingBufferIterator(this, size()); }
-  const_iterator cend() const { return RingBufferIterator(this, size()); }
-
-  // TODO: Add reverse iterator support
-  // TODO: Add fill/swap
-  class RingBufferIterator {
-  public:
-    using iterator_category = std::random_access_iterator_tag;
-    using difference_type = std::ptrdiff_t;
-    using value_type = T;
-    using pointer = T *;
-    using reference = T &;
-
-    RingBufferIterator(RingBuffer *ringBuffer)
-        : ringBuffer_(ringBuffer), idx_(0) {}
-
-    RingBufferIterator(RingBuffer *ringBuffer, size_t idx)
-        : ringBuffer_(ringBuffer), idx_(idx) {}
-
-    reference operator*() const {
-      assert(ringBuffer_ != nullptr);
-
-      return (*ringBuffer_)[idx_];
-    }
-    pointer operator->() const { return &(*(*this)); }
-
-    reference operator++() {
-      idx_++;
-      return *this;
-    };
-
-    reference operator--() {
-      idx_--;
-      return *this;
+    size_t i;
+    for (i = 0; i < amountToCopy; i++) {
+      push(data[i]);
     }
 
-    RingBufferIterator operator++(int) {
-      RingBufferIterator tmp = *this;
-      ++(*this);
-      return tmp;
-    }
-
-    RingBufferIterator operator--(int) {
-      RingBufferIterator tmp = *this;
-      --(*this);
-      return tmp;
-    }
-
-    reference operator+=(difference_type n) {
-      idx_ += n;
-      return *this;
-    }
-
-    reference operator-=(difference_type n) { return *this += -n; }
-
-    friend RingBufferIterator operator+(RingBufferIterator iterator,
-                                        difference_type n) {
-      iterator += n;
-      return iterator;
-    }
-
-    friend RingBufferIterator operator+(difference_type n,
-                                        RingBufferIterator iterator) {
-      iterator += n;
-      return iterator;
-    }
-
-    friend RingBufferIterator operator-(RingBufferIterator iterator,
-                                        difference_type n) {
-      iterator -= n;
-      return iterator;
-    }
-
-    friend difference_type operator-(const RingBufferIterator &lhs,
-                                     const RingBufferIterator &rhs) {
-      return lhs.idx_ - rhs.idx_;
-    }
-
-    reference operator[](difference_type n) const { *(*this + n); }
-
-    bool operator<(const RingBufferIterator &other) const {
-      return other - *this > 0;
-    }
-    bool operator>(const RingBufferIterator &other) const {
-      return other < *this;
-    }
-    bool operator>=(const RingBufferIterator &other) const {
-      return !(*this < other);
-    }
-    bool operator<=(const RingBufferIterator &other) const {
-      return !(*this > other);
-    }
-
-    bool operator==(const RingBufferIterator &other) const {
-      return (ringBuffer_ == other.ringBuffer_ && idx_ == other.idx_);
-    }
-
-    bool operator!=(const RingBufferIterator &other) const {
-      return !(*this == other);
-    }
-
-  private:
-    RingBuffer *ringBuffer_;
-    size_t idx_;
-  };
+    return i;
+  }
 
 private:
   std::array<T, N> data_{};

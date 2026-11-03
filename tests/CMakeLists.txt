@@ -7,5 +7,5 @@ target_sources(oscviz_test PRIVATE
   ${TEST_SOURCES}
 )
 
-target_link_libraries(oscviz_test PRIVATE oscviz_core GTest::gtest_main PortAudio)
+target_link_libraries(oscviz_test PRIVATE oscviz_core GTest::gtest_main portaudio)
 gtest_discover_tests(oscviz_test)

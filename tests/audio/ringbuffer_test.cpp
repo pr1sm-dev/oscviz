@@ -141,29 +141,55 @@ TEST(RingBuffer, RingBufferPopPushPeek) {
   EXPECT_EQ(b, 100);
 }
 
-// TODO: this test is awful, reeewrite it
 TEST(RingBuffer, WrapAround) {
-  audio::RingBuffer<int, 15> buf;
+  audio::RingBuffer<int, 10> buf;
 
   // write and consume in intervals of 5 to ensure that the buffer handles
   // wrapping properly
   int res;
   for (int i = 0; i < 6; i++) {
+    // push 5
     for (int j = 0; j < 5; j++) {
       buf.push(i * 5 + j);
     }
+    // read 4
     for (int j = 0; j < 4; j++) {
       buf.pop(res);
     }
 
-    std::cout << "i=" << i << std::endl;
-    EXPECT_EQ(buf.size(), std::min(10, i + 1));
+    buf.peek(res);
+    EXPECT_EQ(res, (i + 1) * 4);
+    EXPECT_EQ(buf.size(), i + 1);
   }
 
   for (int i = 0; i < 6; i++) {
     ASSERT_EQ(buf.pop(res), true);
     ASSERT_EQ(res, 24 + i);
   }
+
+  ValidateRingBufferState(buf, 0, 10, false, true);
+}
+
+TEST(RingBuffer, BulkWrite) {
+  int arr[] = {1, 2, 3, 4, 5};
+  audio::RingBuffer<int, 5> buf;
+
+  EXPECT_EQ(buf.write(arr, 0), 0);
+  ValidateRingBufferState(buf, 0, 5, false, true);
+
+  // partial write
+  EXPECT_EQ(buf.write(arr, 2), 2);
+  ValidateRingBufferState(buf, 2, 5, false, false);
+  EXPECT_EQ(buf.front(), 1);
+  EXPECT_EQ(buf.back(), 2);
+
+  // overwrite
+  EXPECT_EQ(buf.write(arr, 5), 3);
+  EXPECT_EQ(buf.front(), 1);
+  EXPECT_EQ(buf.back(), 3);
+  ValidateRingBufferState(buf, 5, 5, true, false);
+  EXPECT_EQ(buf.write(arr, 5), 0);
+  ValidateRingBufferState(buf, 5, 5, true, false);
 }
 
 // TODO: write iterator tests
