@@ -2,6 +2,7 @@
 
 #include "audio/engine.hpp"
 #include "imgui/imgui.h"
+#include "nfd.h"
 #include <GLFW/glfw3.h>
 #include <string>
 
@@ -13,6 +14,11 @@ struct MeshVisualizerState {
   float verticalOffset;
   float angularOffset;
 };
+
+const nfdu8filteritem_t SourceAudioDialogFilter[1] = {
+    {"Audio file", "wav,mp3,flac"}};
+const nfdopendialogargs_t SourceAudioDialogArgs = {
+    .filterList = SourceAudioDialogFilter, .filterCount = 1};
 
 class OscvizWindow {
 public:
@@ -38,7 +44,7 @@ private:
   GLFWwindow *glfwWindow_;
   ImGuiIO *imguiIO_;
 
-  char audioPath_[256] = {0};
+  char sourceAudioPath_[1024] = {0};
 
   bool showUIElements_ = true;
   bool renderMeshUI_ = true;

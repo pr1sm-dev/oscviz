@@ -1,3 +1,5 @@
+#pragma once
+
 #include <array>
 #include <cassert>
 #include <cstddef>
@@ -47,13 +49,13 @@ public:
   }
 
   T &operator[](size_t pos) {
-    assert(pos < size_);
+    assert(pos < size_.load());
     size_t idx = (head_ + pos) % N;
     return data_[idx];
   }
 
   const T &operator[](size_t pos) const {
-    assert(pos < size_);
+    assert(pos < size_.load());
     size_t idx = (head_ + pos) % N;
     return data_[idx];
   }
@@ -76,10 +78,11 @@ public:
     return data_[(tail_ + N - 1) % N];
   }
 
-  const bool empty() const { return size_ == 0; }
-  const bool is_full() const { return size_ == N; }
-  const std::size_t size() const { return size_; }
+  const bool empty() const { return size_.load() == 0; }
+  const bool is_full() const { return size_.load() == N; }
+  const std::size_t size() const { return size_.load(); }
   const std::size_t max_size() const { return N; }
+  const std::size_t capacity() const { return N - size_.load(); }
 
   bool push(const T &value) noexcept {
     if (is_full()) {
@@ -88,7 +91,7 @@ public:
 
     data_[tail_] = value;
     tail_ = (tail_ + 1) % N;
-    size_++;
+    size_.fetch_add(1);
     return true;
   }
 
@@ -98,7 +101,7 @@ public:
     }
     T value = data_[head_];
     head_ = (head_ + 1) % N;
-    size_--;
+    size_.fetch_sub(1);
 
     res = value;
 
@@ -115,7 +118,7 @@ public:
 
   size_t write(const T *data, size_t count) noexcept {
     assert(data != nullptr);
-    size_t remainingSpace = N - size_;
+    size_t remainingSpace = N - size_.load();
     size_t amountToCopy = count <= remainingSpace ? count : remainingSpace;
 
     size_t i;
@@ -126,10 +129,20 @@ public:
     return i;
   }
 
+  // TODO: Make this return elements out
+  void read(T *out, size_t count) noexcept {
+    assert(out != nullptr);
+    assert(count <= size());
+
+    for (int i = 0; i < count; i++) {
+      pop(out[i]);
+    }
+  }
+
 private:
   std::array<T, N> data_{};
   size_t head_ = 0;
   size_t tail_ = 0;
-  size_t size_ = 0;
+  std::atomic<size_t> size_{0};
 };
 } // namespace audio

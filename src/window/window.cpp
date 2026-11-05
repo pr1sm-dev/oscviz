@@ -127,21 +127,48 @@ void window::OscvizWindow::OscvizWindow::ShowAudioConfigWindow() {
 
   ImGuiInputTextFlags audioPathFlags =
       ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_ElideLeft;
-  ImGui::InputText("Path", audioPath_, sizeof(audioPath_), audioPathFlags);
+  ImGui::InputText("Path", sourceAudioPath_, sizeof(sourceAudioPath_),
+                   audioPathFlags);
 
   if (ImGui::SmallButton("Load")) {
     NFD_Init();
 
-    nfdu8char_t *outPath;
-    nfdopendialogargs_t args = {0};
+    nfdu8char_t *sourceAudioOutPath;
 
-    nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
+    nfdresult_t result =
+        NFD_OpenDialogU8_With(&sourceAudioOutPath, &SourceAudioDialogArgs);
     if (result == NFD_OKAY) {
-      std::snprintf(audioPath_, sizeof(audioPath_), "%s", outPath);
-      NFD_FreePathU8(outPath);
+      std::snprintf(sourceAudioPath_, sizeof(sourceAudioPath_), "%s",
+                    sourceAudioOutPath);
+      NFD_FreePathU8(sourceAudioOutPath);
+
+      audioEngine.LoadSourceAudioFile(sourceAudioPath_);
     }
 
     NFD_Quit();
+  }
+
+  switch (audioEngine.GetAudioStreamStatus()) {
+  case audio::AudioStreamStatus::NoStream:
+    ImGui::Text("No stream!");
+    break;
+  case audio::AudioStreamStatus::Initializing:
+    ImGui::Text("Initializing..");
+    break;
+  case audio::AudioStreamStatus::Error:
+    ImGui::Text("Error!");
+    break;
+  case audio::AudioStreamStatus::Ready:
+    ImGui::Text("Output channels: %d | Size of file: %ld frames | Length: "
+                "%.2fms | Sample rate: %ld",
+                audioEngine.GetAudioStreamInfo().channels,
+                audioEngine.GetAudioStreamSizeInFrames(),
+                audioEngine.GetAudioStreamLengthMs(),
+                audioEngine.GetAudioStreamInfo().sampleRate);
+    break;
+  case audio::AudioStreamStatus::Done:
+    ImGui::Text("Finished reading.");
+    break;
   }
 
   ImGui::End();
