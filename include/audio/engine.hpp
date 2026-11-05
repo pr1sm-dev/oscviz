@@ -1,13 +1,14 @@
 #pragma once
 
 #include "containers.hpp"
+#include <atomic>
 #include <miniaudio.h>
 #include <portaudio.h>
 #include <thread>
 #include <unistd.h>
 #include <vector>
 
-#define RING_BUFFER_SIZE 4096
+#define RING_BUFFER_SIZE 8192
 #define SAMPLE_RATE 48000
 
 namespace audio {
@@ -85,6 +86,8 @@ public:
   int GetPortAudioVersion();
 
 private:
+  void startAudioStream_(AudioDevice audioDevice);
+
   std::vector<AudioDevice> audioDevices_;
   bool initialized_ = false;
 

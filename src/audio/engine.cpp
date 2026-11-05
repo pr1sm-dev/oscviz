@@ -23,19 +23,17 @@ AudioEngine::AudioEngine() {
     }
   }
 
-  PaError streamInitializationError = Pa_OpenDefaultStream(
-      &audioStream_, 0, currentOutputDevice_.outputChannels, paFloat32,
-      SAMPLE_RATE, 256, &audioDeviceStreamCallback_, &streamBuffer_);
-  if (streamInitializationError != paNoError) {
-    std::cout << "ERROR: Could not open default stream, error code 0x"
-              << std::hex << streamInitializationError << std::endl;
-    throw std::invalid_argument("ERROR: Could not open default stream");
-  }
-
-  Pa_StartStream(audioStream_);
+  // TODO: add proper check here, should be if there even is a current input
+  // device
+  startAudioStream_(currentOutputDevice_);
 }
 
-AudioEngine::~AudioEngine() { Pa_Terminate(); }
+AudioEngine::~AudioEngine() {
+  if (audioStream_) {
+    Pa_CloseStream(audioStream_);
+  }
+  Pa_Terminate();
+}
 
 std::vector<AudioDevice> AudioEngine::GetInputDevices() const {
   std::vector<AudioDevice> inputDevices;
@@ -47,6 +45,31 @@ std::vector<AudioDevice> AudioEngine::GetInputDevices() const {
   return inputDevices;
 }
 
+void AudioEngine::startAudioStream_(AudioDevice audioDevice) {
+  if (audioStream_ != nullptr) {
+    Pa_CloseStream(audioStream_);
+    audioStream_ = nullptr;
+  }
+  int channelCount =
+      audioDevice.outputChannels < 2 ? audioDevice.outputChannels : 2;
+
+  PaStreamParameters deviceParameters = {.device = audioDevice.id,
+                                         .channelCount = channelCount,
+                                         .sampleFormat = paFloat32,
+                                         .suggestedLatency = 0.01,
+                                         .hostApiSpecificStreamInfo = NULL};
+
+  PaError streamInitializationError =
+      Pa_OpenStream(&audioStream_, NULL, &deviceParameters, SAMPLE_RATE, 256,
+                    paNoFlag, &audioDeviceStreamCallback_, &streamBuffer_);
+  if (streamInitializationError != paNoError) {
+    std::cout << "ERROR: Could not open default stream, error code 0x"
+              << std::hex << streamInitializationError << std::endl;
+  } else {
+    Pa_StartStream(audioStream_);
+  }
+}
+
 bool AudioEngine::SetOutputDevice(int deviceId) {
   auto newOutputDevice = std::find_if(
       audioDevices_.begin(), audioDevices_.end(),
@@ -56,6 +79,18 @@ bool AudioEngine::SetOutputDevice(int deviceId) {
     return false;
 
   currentOutputDevice_ = *newOutputDevice;
+
+  if (audioStream_) {
+    std::cout << "closing stream..." << std::endl;
+    Pa_CloseStream(audioStream_);
+    audioStream_ = nullptr;
+  }
+
+  // TODO: Break this out into its own function and add error handling so the
+  // main thread knows if it worked
+  startAudioStream_(currentOutputDevice_);
+
+  std::cout << "current stream: " << audioStream_ << std::endl;
 
   return true;
 }
@@ -152,6 +187,7 @@ AudioStreamInfo AudioEngine::GetAudioStreamInfo() const {
   return streamWorker_->GetStreamInfo();
 }
 
+// TODO: Refactor this
 void AudioStreamWorker::run_() {
   sleep(1);
   if (!parentEngine_) {
@@ -248,8 +284,6 @@ void AudioStreamWorker::run_() {
       streamStatus_.store(AudioStreamStatus::Error);
       break;
     }
-    if (framesIn < framesRead)
-      std::cout << "DROPPED " << (framesRead - framesIn) << " input frames\n";
     // std::cout << "Read " << framesRead << " frames." << std::endl;
 
     ringBuffer_.write(audioFramesResampled, framesOut * decoder.outputChannels);
