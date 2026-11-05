@@ -34,6 +34,11 @@ public:
   void ProcessKey(int key, int scancode, int action, int mode);
   void RenderUIWindows();
 
+  audio::RingBuffer<audio::AudioFrameReport, FRAME_REPORT_SIZE> &
+  GetAudioFrameReportBuffer() {
+    return audioEngine.GetAudioFrameReportBuffer();
+  };
+
   MeshVisualizerState GetMeshVisualizerState() { return meshVisualizerState_; }
 
   static void GLFWKeyCallback(GLFWwindow *window, int key, int scancode,
@@ -43,6 +48,8 @@ private:
   audio::AudioEngine audioEngine;
   GLFWwindow *glfwWindow_;
   ImGuiIO *imguiIO_;
+
+  std::atomic<double> currentTime_{0.0};
 
   char sourceAudioPath_[1024] = {0};
 

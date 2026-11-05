@@ -117,6 +117,8 @@ public:
     return true;
   }
 
+  T peek() const { return data_[head_]; }
+
   size_t write(const T *data, size_t count) noexcept {
     assert(data != nullptr);
     size_t remainingSpace = N - size_.load();

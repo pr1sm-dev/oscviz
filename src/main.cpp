@@ -3,6 +3,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include "audio/engine.hpp"
 #include "graphics/shader.hpp"
 #include "graphics/sphere.hpp"
 #include "window/window.hpp"
@@ -38,13 +39,29 @@ int main() {
 
   glEnable(GL_DEPTH_TEST);
 
+  double curRms = 0.0;
+  audio::AudioFrameReport lastFrameReport{.rms = 0.0,
+                                          .estimatedPlaybackAt = 0.0};
+
   while (!glfwWindowShouldClose(window.GetGLFWWindow())) {
     // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glfwPollEvents();
 
-    float time = glfwGetTime();
-
     window.RenderUIWindows();
+
+    double time = glfwGetTime();
+
+    audio::RingBuffer<audio::AudioFrameReport, FRAME_REPORT_SIZE>
+        &frameReportBuffer = window.GetAudioFrameReportBuffer();
+
+    while (!frameReportBuffer.empty() &&
+           frameReportBuffer.peek().estimatedPlaybackAt < time) {
+      audio::AudioFrameReport lastFrameReport;
+      frameReportBuffer.pop(lastFrameReport);
+
+      curRms = lastFrameReport.rms;
+      // std::cout << "curRms=" << curRms << std::endl;
+    }
 
     window::MeshVisualizerState meshState = window.GetMeshVisualizerState();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -52,7 +69,7 @@ int main() {
     s.Use();
     s.SetFloat("time", time);
     s.SetFloat("tilt", meshState.tilt);
-    s.SetFloat("amplitude", meshState.amplitude);
+    s.SetFloat("amplitude", meshState.amplitude * 0.05 * curRms);
     s.SetFloat("frequency", meshState.frequency);
     s.SetFloat("verticalOffset", meshState.verticalOffset);
     s.SetFloat("angularOffset", meshState.angularOffset);

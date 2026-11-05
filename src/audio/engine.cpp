@@ -1,11 +1,13 @@
 #include "audio/engine.hpp"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <portaudio.h>
 #include <stdexcept>
 
 namespace audio {
-AudioEngine::AudioEngine() {
+AudioEngine::AudioEngine(const std::atomic<double> *currentTimePtr)
+    : currentTimePtr_(currentTimePtr) {
   PaError error = Pa_Initialize();
   if (error != paNoError) {
     std::cout << "ERROR: Could not initialize PortAudio, error code 0x"
@@ -59,9 +61,13 @@ void AudioEngine::startAudioStream_(AudioDevice audioDevice) {
                                          .suggestedLatency = 0.01,
                                          .hostApiSpecificStreamInfo = NULL};
 
+  audioThreadData_ = {.bufferPtr = &streamBuffer_,
+                      .frameReportBufferPtr = &frameReportBuffer_,
+                      .durationPtr = currentTimePtr_};
+
   PaError streamInitializationError =
       Pa_OpenStream(&audioStream_, NULL, &deviceParameters, SAMPLE_RATE, 256,
-                    paNoFlag, &audioDeviceStreamCallback_, &streamBuffer_);
+                    paNoFlag, &audioDeviceStreamCallback_, &audioThreadData_);
   if (streamInitializationError != paNoError) {
     std::cout << "ERROR: Could not open default stream, error code 0x"
               << std::hex << streamInitializationError << std::endl;
@@ -308,21 +314,37 @@ int audioDeviceStreamCallback_(const void *inputBuffer, void *outputBuffer,
                                void *userData) {
   // TODO: create struct and pass in more data
   // FOR NOW ASSUME 2 CHANNELS
-  RingBuffer<float, RING_BUFFER_SIZE> *buffer =
-      (RingBuffer<float, RING_BUFFER_SIZE> *)userData;
+  AudioThreadData *threadDataPtr = (AudioThreadData *)userData;
   float *outFrames = (float *)outputBuffer;
 
-  unsigned int dataAvailable = buffer->size();
+  unsigned int dataAvailable = threadDataPtr->bufferPtr->size();
   unsigned int framesToWrite = (dataAvailable / 2) < framesPerBuffer
                                    ? (dataAvailable / 2)
                                    : framesPerBuffer;
 
+  double rms = 0.0;
+
   if (framesToWrite > 0) {
-    buffer->read(outFrames, framesToWrite * 2);
+    threadDataPtr->bufferPtr->read(outFrames, framesToWrite * 2);
+
+    for (int i = 0; i < framesToWrite; i++) {
+      rms += outFrames[i] * outFrames[i];
+    }
+    rms = std::sqrt(rms);
   }
 
+  if (!threadDataPtr->frameReportBufferPtr->is_full()) {
+    double expectedPlayAt =
+        threadDataPtr->durationPtr->load() +
+        (timeInfo->outputBufferDacTime - timeInfo->currentTime);
+
+    AudioFrameReport frameReport = {.rms = rms,
+                                    .estimatedPlaybackAt = expectedPlayAt};
+    threadDataPtr->frameReportBufferPtr->push(frameReport);
+  }
+
+  // fill the rest with silence
   if (framesToWrite < framesPerBuffer) {
-    std::cout << "Miss!" << std::endl;
     for (int i = 0; i < framesPerBuffer - framesToWrite; i++) {
       outFrames[framesToWrite * 2 + 2 * i] = 0;
       outFrames[framesToWrite * 2 + 2 * i + 1] = 0;

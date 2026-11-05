@@ -9,12 +9,22 @@
 #include <vector>
 
 #define RING_BUFFER_SIZE 8192
+#define FRAME_REPORT_SIZE 128
 #define SAMPLE_RATE 48000
 
 namespace audio {
 
 class AudioStreamWorker;
 
+struct AudioFrameReport {
+  double rms;
+  double estimatedPlaybackAt;
+};
+struct AudioThreadData {
+  RingBuffer<float, RING_BUFFER_SIZE> *bufferPtr;
+  RingBuffer<AudioFrameReport, FRAME_REPORT_SIZE> *frameReportBufferPtr;
+  const std::atomic<double> *durationPtr;
+};
 struct AudioStreamInfo {
   unsigned long sizeInFrames;
   double lengthMs;
@@ -54,7 +64,7 @@ enum class AudioStreamError {
 
 class AudioEngine {
 public:
-  AudioEngine();
+  AudioEngine(const std::atomic<double> *currentTimePtr);
   ~AudioEngine();
   AudioEngine(const AudioEngine &engine) = delete;
   AudioEngine &operator=(const AudioEngine &engine) = delete;
@@ -83,6 +93,10 @@ public:
   double GetAudioStreamLengthMs() const;
   AudioStreamInfo GetAudioStreamInfo() const;
 
+  RingBuffer<AudioFrameReport, FRAME_REPORT_SIZE> &GetAudioFrameReportBuffer() {
+    return frameReportBuffer_;
+  }
+
   int GetPortAudioVersion();
 
 private:
@@ -92,11 +106,14 @@ private:
   bool initialized_ = false;
 
   PaStream *audioStream_ = nullptr;
+  const std::atomic<double> *currentTimePtr_;
 
   std::unique_ptr<AudioStreamWorker> streamWorker_ = nullptr;
 
   RingBuffer<float, RING_BUFFER_SIZE> streamBuffer_;
+  RingBuffer<AudioFrameReport, FRAME_REPORT_SIZE> frameReportBuffer_;
 
+  AudioThreadData audioThreadData_; // TODO: pick a better name for this
   AudioDevice currentInputDevice_;
   AudioDevice currentOutputDevice_;
 };

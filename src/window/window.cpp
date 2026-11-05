@@ -14,7 +14,8 @@
 #include <iostream>
 
 window::OscvizWindow::OscvizWindow(int width, int height,
-                                   const std::string &name) {
+                                   const std::string &name)
+    : audioEngine(&currentTime_) {
   if (!glfwInit()) {
     std::cout << "ERROR: Could not initialize GLFW" << std::endl;
   }
@@ -175,6 +176,9 @@ void window::OscvizWindow::OscvizWindow::ShowAudioConfigWindow() {
 }
 
 void window::OscvizWindow::OscvizWindow::RenderUIWindows() {
+  double time = glfwGetTime();
+  currentTime_.store(time);
+
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
