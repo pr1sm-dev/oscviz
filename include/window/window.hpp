@@ -34,15 +34,17 @@ public:
   void ProcessKey(int key, int scancode, int action, int mode);
   void RenderUIWindows();
 
-  audio::RingBuffer<audio::AudioFrameReport, FRAME_REPORT_SIZE> &
+  audio::RingBuffer<audio::AudioPlaybackReport, FRAME_REPORT_SIZE> &
   GetAudioFrameReportBuffer() {
-    return audioEngine.GetAudioFrameReportBuffer();
+    return audioEngine.GetAudioPlaybackReportBuffer();
   };
 
   MeshVisualizerState GetMeshVisualizerState() { return meshVisualizerState_; }
 
   static void GLFWKeyCallback(GLFWwindow *window, int key, int scancode,
                               int action, int mode);
+
+  void SetRMS(double rms) { curRms_ = rms; }
 
 private:
   audio::AudioEngine audioEngine;
@@ -57,6 +59,8 @@ private:
   bool renderMeshUI_ = true;
   bool renderAudioConfigUI_ = true;
   MeshVisualizerState meshVisualizerState_;
+
+  double curRms_ = 0.0;
 };
 
 GLFWwindow *initializeGlfwWindow(int width, int height,

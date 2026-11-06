@@ -4,7 +4,6 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
-#include <iterator>
 #include <stdexcept>
 
 namespace audio {

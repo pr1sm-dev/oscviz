@@ -149,26 +149,27 @@ void window::OscvizWindow::OscvizWindow::ShowAudioConfigWindow() {
     NFD_Quit();
   }
 
-  switch (audioEngine.GetAudioStreamStatus()) {
-  case audio::AudioStreamStatus::NoStream:
+  switch (audioEngine.GetAudioFileStreamStatus()) {
+  case audio::AudioFileStreamStatus::NoStream:
     ImGui::Text("No stream!");
     break;
-  case audio::AudioStreamStatus::Initializing:
+  case audio::AudioFileStreamStatus::Initializing:
     ImGui::Text("Initializing..");
     break;
-  case audio::AudioStreamStatus::Error:
+  case audio::AudioFileStreamStatus::Error:
     ImGui::Text("Error!");
     break;
-  case audio::AudioStreamStatus::Ready:
+  case audio::AudioFileStreamStatus::Done:
+    ImGui::Text("Done!");
+    break;
+  case audio::AudioFileStreamStatus::Ready:
+    audio::AudioFileStreamInfo streamInfo =
+        audioEngine.GetAudioFileStreamInfo();
     ImGui::Text("Output channels: %d | Size of file: %ld frames | Length: "
                 "%.2fms | Sample rate: %ld",
-                audioEngine.GetAudioStreamInfo().channels,
-                audioEngine.GetAudioStreamSizeInFrames(),
-                audioEngine.GetAudioStreamLengthMs(),
-                audioEngine.GetAudioStreamInfo().sampleRate);
-    break;
-  case audio::AudioStreamStatus::Done:
-    ImGui::Text("Finished reading.");
+                streamInfo.channels, streamInfo.sizeInFrames,
+                streamInfo.lengthMs, streamInfo.sampleRate);
+    ImGui::Text("Current RMS: %.2f", curRms_);
     break;
   }
 

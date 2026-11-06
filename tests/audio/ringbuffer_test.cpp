@@ -1,5 +1,4 @@
 #include "audio/containers.hpp"
-#include "audio/engine.hpp"
 #include <gtest/gtest.h>
 #include <stdexcept>
 
@@ -49,10 +48,10 @@ TEST(RingBuffer, RingBufferAccessOperators) {
 
   EXPECT_THROW(
       { emptyBuffer.at(0); }, std::out_of_range)
-      << "RingBuffer did not through out of range";
+      << "RingBuffer did not throw out of range";
   EXPECT_THROW(
       { emptyBuffer.at(-1); }, std::out_of_range)
-      << "RingBuffer did not through out of range";
+      << "RingBuffer did not throw out of range";
 
   audio::RingBuffer<int, 5> nonEmptyBuffer({1, 2, 3});
 

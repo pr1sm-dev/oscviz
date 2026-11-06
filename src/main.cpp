@@ -1,5 +1,4 @@
 #include <glad/glad.h>
-#include <iostream>
 
 #include <GLFW/glfw3.h>
 
@@ -9,7 +8,6 @@
 #include "window/window.hpp"
 
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
 
 int main() {
@@ -17,7 +15,7 @@ int main() {
 
   Shader s("shaders/base_vertex.vs", "shaders/base_fragment.fs");
 
-  Sphere sphere(1.0f, 1000, 100);
+  Sphere sphere(1.0f, 128, 128);
 
   GLuint VBO, VAO, EBO;
   glGenBuffers(1, &VBO);
@@ -40,8 +38,8 @@ int main() {
   glEnable(GL_DEPTH_TEST);
 
   double curRms = 0.0;
-  audio::AudioFrameReport lastFrameReport{.rms = 0.0,
-                                          .estimatedPlaybackAt = 0.0};
+  audio::AudioPlaybackReport lastFrameReport{.rms = 0.0,
+                                             .estimatedPlaybackAt = 0.0};
 
   while (!glfwWindowShouldClose(window.GetGLFWWindow())) {
     // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -51,16 +49,18 @@ int main() {
 
     double time = glfwGetTime();
 
-    audio::RingBuffer<audio::AudioFrameReport, FRAME_REPORT_SIZE>
+    audio::RingBuffer<audio::AudioPlaybackReport, FRAME_REPORT_SIZE>
         &frameReportBuffer = window.GetAudioFrameReportBuffer();
 
     while (!frameReportBuffer.empty() &&
            frameReportBuffer.peek().estimatedPlaybackAt < time) {
-      audio::AudioFrameReport lastFrameReport;
+      audio::AudioPlaybackReport lastFrameReport;
       frameReportBuffer.pop(lastFrameReport);
 
       curRms = lastFrameReport.rms;
       // std::cout << "curRms=" << curRms << std::endl;
+
+      window.SetRMS(curRms);
     }
 
     window::MeshVisualizerState meshState = window.GetMeshVisualizerState();
@@ -69,10 +69,11 @@ int main() {
     s.Use();
     s.SetFloat("time", time);
     s.SetFloat("tilt", meshState.tilt);
-    s.SetFloat("amplitude", meshState.amplitude * 0.05 * curRms);
-    s.SetFloat("frequency", meshState.frequency);
+    s.SetFloat("amplitude", meshState.amplitude * curRms);
+    s.SetFloat("frequency", meshState.frequency * curRms);
     s.SetFloat("verticalOffset", meshState.verticalOffset);
     s.SetFloat("angularOffset", meshState.angularOffset);
+    s.SetFloat("power", curRms);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glBindVertexArray(VAO);
