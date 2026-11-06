@@ -7,4 +7,4 @@ Next steps, include audio playback and microphone input.
 
 <img width="1470" height="788" alt="image" src="https://github.com/user-attachments/assets/6387c809-bf72-455c-93fc-4f918924a45a" />
 
-**Note:** All code is human-generated without the assistance of LLM tools.
+**Note:** All code is human-generated
