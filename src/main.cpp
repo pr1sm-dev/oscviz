@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 
 #include <GLFW/glfw3.h>
+#include <math.h>
 
 #include "audio/engine.hpp"
 #include "graphics/shader.hpp"

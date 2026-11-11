@@ -9,6 +9,7 @@ target_sources(oscviz_core PRIVATE
   graphics/shader.cpp
   graphics/sphere.cpp
   window/window.cpp
+  audio/algorithms.cpp
   audio/engine.cpp
 )
 
