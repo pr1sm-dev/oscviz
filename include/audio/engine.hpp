@@ -18,7 +18,8 @@ namespace audio {
 class AudioStreamWorker;
 
 struct AudioPlaybackReport {
-  double rms;
+  double lRms;
+  double rRms;
   double estimatedPlaybackAt;
 };
 struct AudioPlaybackThreadData {
@@ -50,6 +51,7 @@ enum class AudioFileStreamStatus {
   NoStream,
   Initializing,
   Ready,
+  Paused,
   Done,
   Error,
 };
@@ -214,17 +216,14 @@ class AudioStreamWorker {
 public:
   AudioStreamWorker(AudioEngine *engine, const std::string &sourceAudioPath,
                     RingBuffer<float, RING_BUFFER_SIZE> &buffer)
-      : sourceAudioPath_(sourceAudioPath), parentEngine_(engine),
+      : sourceAudioPath_(sourceAudioPath), parentEnginePtr_(engine),
         ringBuffer_(buffer), thread_(&AudioStreamWorker::run_, this) {}
 
-  ~AudioStreamWorker() {
-    shouldStop_.store(true);
-    if (thread_.joinable())
-      thread_.join();
-  }
+  ~AudioStreamWorker();
+
   AudioStreamWorker(AudioStreamWorker &&worker) noexcept
       : sourceAudioPath_(std::move(worker.sourceAudioPath_)),
-        parentEngine_(std::move(worker.parentEngine_)),
+        parentEnginePtr_(std::move(worker.parentEnginePtr_)),
         ringBuffer_(worker.ringBuffer_) {
     worker.shouldStop_.store(true);
     if (worker.thread_.joinable()) {
@@ -253,6 +252,7 @@ public:
   }
 
 private:
+  void initialize_();
   void run_();
 
   std::atomic<long> frameOffset_{0};
@@ -266,8 +266,14 @@ private:
       AudioFileStreamStatus::Initializing};
   std::atomic<AudioFileStreamError> errorType_{AudioFileStreamError::NoError};
 
-  AudioEngine *parentEngine_ = nullptr;
+  AudioEngine *parentEnginePtr_ = nullptr;
   RingBuffer<float, RING_BUFFER_SIZE> &ringBuffer_;
+
+  ma_decoder decoder_;
+  bool decoderInitialized_ = false;
+
+  ma_data_converter converter_;
+  bool converterInitialized_ = false;
 
   std::thread thread_;
 };

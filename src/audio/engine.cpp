@@ -1,9 +1,11 @@
 #include "audio/engine.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <portaudio.h>
 #include <stdexcept>
+#include <thread>
 
 namespace audio {
 AudioEngine::AudioEngine(const std::atomic<double> *currentTimePtr)
@@ -177,87 +179,112 @@ AudioFileStreamInfo AudioEngine::GetAudioFileStreamInfo() const {
   return audioFileStreamWorker_->GetStreamInfo();
 }
 
-// TODO: Refactor this
-void AudioStreamWorker::run_() {
-  sleep(1);
-  if (!parentEngine_) {
+AudioStreamWorker::~AudioStreamWorker() {
+  shouldStop_.store(true);
+  if (thread_.joinable())
+    thread_.join();
+
+  if (decoderInitialized_) {
+    ma_decoder_uninit(&decoder_);
+  }
+  if (converterInitialized_) {
+    ma_data_converter_uninit(&converter_, NULL);
+  }
+}
+
+void AudioStreamWorker::initialize_() {
+  if (!parentEnginePtr_) {
     errorType_.store(AudioFileStreamError::ErrorNoParentEngine);
     streamStatus_.store(AudioFileStreamStatus::Error);
     return;
   }
 
   // Note: if there is an issue with no active device, this is probably where...
-  const AudioDevice &outputDevice = parentEngine_->GetCurrentOutputDevice();
+  const AudioDevice &outputDevice = parentEnginePtr_->GetCurrentOutputDevice();
 
-  // open the stream
-  ma_decoder decoder;
-  ma_data_converter converter;
+  // TODO: check valid device?
+
+  // Open the file stream
   ma_decoder_config decoderConfig = ma_decoder_config_init(
       ma_format_f32,
       outputDevice.outputChannels > 2 ? 2 : outputDevice.outputChannels, 0);
   ma_result initializeDecoderResult =
-      ma_decoder_init_file(sourceAudioPath_.c_str(), &decoderConfig, &decoder);
+      ma_decoder_init_file(sourceAudioPath_.c_str(), &decoderConfig, &decoder_);
   if (initializeDecoderResult != MA_SUCCESS) {
     errorType_.store(AudioFileStreamError::ErrorCouldNotLoadFile);
     streamStatus_.store(AudioFileStreamStatus::Error);
     return;
   }
+  decoderInitialized_ = true;
 
+  // start the resampler
   ma_data_converter_config dataConverterConfig = ma_data_converter_config_init(
-      decoder.outputFormat, ma_format_f32, decoder.outputChannels,
-      decoder.outputChannels, decoder.outputSampleRate, SAMPLE_RATE);
+      decoder_.outputFormat, ma_format_f32, decoder_.outputChannels,
+      decoder_.outputChannels, decoder_.outputSampleRate, SAMPLE_RATE);
   ma_result inititalizeConverterResult =
-      ma_data_converter_init(&dataConverterConfig, NULL, &converter);
+      ma_data_converter_init(&dataConverterConfig, NULL, &converter_);
 
   if (inititalizeConverterResult != MA_SUCCESS) {
     errorType_.store(AudioFileStreamError::ErrorCouldNotStartResampler);
     streamStatus_.store(AudioFileStreamStatus::Error);
-
-    ma_decoder_uninit(&decoder);
     return;
   }
+  converterInitialized_ = true;
 
   ma_uint64 nofFrames;
-  ma_result getTotalSizeResult =
-      ma_data_source_get_length_in_pcm_frames(&decoder, &nofFrames);
-  if (getTotalSizeResult != MA_SUCCESS) {
+  ma_result getFileSizeResult =
+      ma_data_source_get_length_in_pcm_frames(&decoder_, &nofFrames);
+  if (getFileSizeResult != MA_SUCCESS) {
     errorType_.store(AudioFileStreamError::ErrorCouldNotLoadFile);
     streamStatus_.store(AudioFileStreamStatus::Error);
-
-    ma_decoder_uninit(&decoder);
-    ma_data_converter_uninit(&converter, NULL);
     return;
   }
 
+  // Store metadata about the file
   streamInfo_.sizeInFrames = nofFrames;
-  streamInfo_.sampleRate = decoder.outputSampleRate;
-  streamInfo_.channels = decoder.outputChannels;
+  streamInfo_.sampleRate = decoder_.outputSampleRate;
+  streamInfo_.channels = decoder_.outputChannels;
   streamInfo_.lengthMs =
       ((double)streamInfo_.sizeInFrames / streamInfo_.sampleRate) * 1000;
+}
 
+void AudioStreamWorker::run_() {
+  sleep(1);
+  initialize_();
+  if (streamStatus_.load() == AudioFileStreamStatus::Error)
+    return;
+
+  // Now we begin
   streamStatus_.store(AudioFileStreamStatus::Ready);
 
-  float audioFrames[RING_BUFFER_SIZE];
+  float audioFrames[RING_BUFFER_SIZE]; // can store (RING_BUFFER_SIZE /
+                                       // channels) number of frames
   float audioFramesResampled[RING_BUFFER_SIZE];
   while (!shouldStop_.load() &&
          (streamStatus_.load() == AudioFileStreamStatus::Ready)) {
-    int framesAvailable = ringBuffer_.capacity() / decoder.outputChannels;
-    // Multiply this by the resample ratio
-    // we want to get x frames such that when resampled, they will at most get
-    // the number of available frames
-    // int framesRequired = framesAvailable * resampleRatio;
+    if (streamStatus_.load() == AudioFileStreamStatus::Paused) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      continue;
+    }
 
-    ma_uint64 inputFramesRequired;
-    ma_data_converter_get_required_input_frame_count(
-        &converter, framesAvailable, &inputFramesRequired);
+    int framesAvailable = ringBuffer_.remaining() / decoder_.outputChannels;
 
+    // if the audio thread is consuming too quickly, wait a bit to not burn the
+    // CPU
     if (framesAvailable == 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       continue;
     }
+
+    // Get the number of frames to read, so that when resampled it can fill the
+    // ring buffer
+    ma_uint64 inputFramesRequired;
+    ma_data_converter_get_required_input_frame_count(
+        &converter_, framesAvailable, &inputFramesRequired);
+
     ma_uint64 framesRead;
     ma_result readResult = ma_decoder_read_pcm_frames(
-        &decoder, audioFrames, inputFramesRequired, &framesRead);
+        &decoder_, audioFrames, inputFramesRequired, &framesRead);
     if (readResult != MA_SUCCESS && readResult != MA_AT_END) {
       errorType_.store(AudioFileStreamError::ErrorSampleRead);
       streamStatus_.store(AudioFileStreamStatus::Error);
@@ -268,27 +295,23 @@ void AudioStreamWorker::run_() {
     ma_uint64 framesOut = framesAvailable;
 
     ma_result resampleResult = ma_data_converter_process_pcm_frames(
-        &converter, audioFrames, &framesIn, audioFramesResampled, &framesOut);
+        &converter_, audioFrames, &framesIn, audioFramesResampled, &framesOut);
     if (resampleResult != MA_SUCCESS) {
       errorType_.store(AudioFileStreamError::ErrorSampleRead);
       streamStatus_.store(AudioFileStreamStatus::Error);
       break;
     }
-    // std::cout << "Read " << framesRead << " frames." << std::endl;
 
-    ringBuffer_.write(audioFramesResampled, framesOut * decoder.outputChannels);
+    ringBuffer_.write(audioFramesResampled,
+                      framesOut * decoder_.outputChannels);
 
     if (readResult == MA_AT_END) {
-      streamStatus_.store(AudioFileStreamStatus::Done);
+      streamStatus_.store(AudioFileStreamStatus::Paused);
     }
 
+    // This is to not burn the CPU, improvements might make this dynamic
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
-
-  ma_decoder_uninit(&decoder);
-  ma_data_converter_uninit(&converter, NULL);
-
-  std::cout << "ending thread!" << std::endl;
 }
 
 int audioDeviceStreamCallback_(const void *inputBuffer, void *outputBuffer,
@@ -296,7 +319,6 @@ int audioDeviceStreamCallback_(const void *inputBuffer, void *outputBuffer,
                                const PaStreamCallbackTimeInfo *timeInfo,
                                PaStreamCallbackFlags statusFlags,
                                void *userData) {
-  // TODO: create struct and pass in more data
   // FOR NOW ASSUME 2 CHANNELS
   AudioPlaybackThreadData *threadDataPtr = (AudioPlaybackThreadData *)userData;
   float *outFrames = (float *)outputBuffer;
@@ -306,16 +328,18 @@ int audioDeviceStreamCallback_(const void *inputBuffer, void *outputBuffer,
                                    ? (dataAvailable / 2)
                                    : framesPerBuffer;
 
-  double rms = 0.0;
+  double lRms = 0.0;
+  double rRms = 0.0;
 
   if (framesToWrite > 0) {
     threadDataPtr->bufferPtr->read(outFrames, framesToWrite * 2);
 
     for (int i = 0; i < framesToWrite; i++) {
-      rms += outFrames[2 * i] * outFrames[2 * i];
-      rms += outFrames[2 * i + 1] * outFrames[2 * i + 1];
+      lRms += outFrames[2 * i] * outFrames[2 * i];
+      rRms += outFrames[2 * i + 1] * outFrames[2 * i + 1];
     }
-    rms = std::sqrt(rms / (2 * framesToWrite));
+    lRms = std::sqrt(lRms / framesToWrite);
+    rRms = std::sqrt(rRms / framesToWrite);
   }
 
   if (!threadDataPtr->frameReportBufferPtr->is_full()) {
@@ -323,8 +347,8 @@ int audioDeviceStreamCallback_(const void *inputBuffer, void *outputBuffer,
         threadDataPtr->durationPtr->load() +
         (timeInfo->outputBufferDacTime - timeInfo->currentTime);
 
-    AudioPlaybackReport frameReport = {.rms = rms,
-                                       .estimatedPlaybackAt = expectedPlayAt};
+    AudioPlaybackReport frameReport = {
+        .lRms = lRms, .rRms = rRms, .estimatedPlaybackAt = expectedPlayAt};
     threadDataPtr->frameReportBufferPtr->push(frameReport);
   }
 

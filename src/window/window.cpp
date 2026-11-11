@@ -158,9 +158,13 @@ void window::OscvizWindow::OscvizWindow::ShowAudioConfigWindow() {
     break;
   case audio::AudioFileStreamStatus::Error:
     ImGui::Text("Error!");
+    ImGui::Text("Error: %d", audioEngine.GetAudioFileStreamError());
     break;
   case audio::AudioFileStreamStatus::Done:
     ImGui::Text("Done!");
+    break;
+  case audio::AudioFileStreamStatus::Paused:
+    ImGui::Text("Paused");
     break;
   case audio::AudioFileStreamStatus::Ready:
     audio::AudioFileStreamInfo streamInfo =
@@ -169,6 +173,8 @@ void window::OscvizWindow::OscvizWindow::ShowAudioConfigWindow() {
                 "%.2fms | Sample rate: %ld",
                 streamInfo.channels, streamInfo.sizeInFrames,
                 streamInfo.lengthMs, streamInfo.sampleRate);
+    ImGui::Text("Current RMS L: %.2f | Current RMS R: %.2f", curLRms_,
+                curRRms_);
     ImGui::Text("Current RMS: %.2f", curRms_);
     break;
   }

@@ -37,9 +37,11 @@ int main() {
 
   glEnable(GL_DEPTH_TEST);
 
+  double curLRms = 0.0;
+  double curRRms = 0.0;
   double curRms = 0.0;
-  audio::AudioPlaybackReport lastFrameReport{.rms = 0.0,
-                                             .estimatedPlaybackAt = 0.0};
+  audio::AudioPlaybackReport lastFrameReport{
+      .lRms = 0.0, .rRms = 0.0, .estimatedPlaybackAt = 0.0};
 
   while (!glfwWindowShouldClose(window.GetGLFWWindow())) {
     // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -57,10 +59,12 @@ int main() {
       audio::AudioPlaybackReport lastFrameReport;
       frameReportBuffer.pop(lastFrameReport);
 
-      curRms = lastFrameReport.rms;
+      curLRms = lastFrameReport.lRms;
+      curRRms = lastFrameReport.rRms;
+      curRms = 0.5 * std::sqrt(curLRms * curLRms + curRRms * curRRms);
       // std::cout << "curRms=" << curRms << std::endl;
 
-      window.SetRMS(curRms);
+      window.SetRMS(curRms, curLRms, curRRms);
     }
 
     window::MeshVisualizerState meshState = window.GetMeshVisualizerState();
@@ -69,11 +73,13 @@ int main() {
     s.Use();
     s.SetFloat("time", time);
     s.SetFloat("tilt", meshState.tilt);
-    s.SetFloat("amplitude", meshState.amplitude * curRms);
-    s.SetFloat("frequency", meshState.frequency * curRms);
+    s.SetFloat("amplitude", meshState.amplitude);
+    s.SetFloat("frequency", meshState.frequency);
     s.SetFloat("verticalOffset", meshState.verticalOffset);
     s.SetFloat("angularOffset", meshState.angularOffset);
     s.SetFloat("power", curRms);
+    s.SetFloat("powerL", curLRms);
+    s.SetFloat("powerR", curRRms);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glBindVertexArray(VAO);

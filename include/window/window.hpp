@@ -44,7 +44,11 @@ public:
   static void GLFWKeyCallback(GLFWwindow *window, int key, int scancode,
                               int action, int mode);
 
-  void SetRMS(double rms) { curRms_ = rms; }
+  void SetRMS(double rms, double lRms, double rRms) {
+    curRms_ = rms;
+    curLRms_ = lRms;
+    curRRms_ = rRms;
+  }
 
 private:
   audio::AudioEngine audioEngine;
@@ -61,6 +65,8 @@ private:
   MeshVisualizerState meshVisualizerState_;
 
   double curRms_ = 0.0;
+  double curLRms_ = 0.0;
+  double curRRms_ = 0.0;
 };
 
 GLFWwindow *initializeGlfwWindow(int width, int height,

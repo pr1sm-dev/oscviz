@@ -82,7 +82,7 @@ public:
   const bool is_full() const { return size_.load() == N; }
   const std::size_t size() const { return size_.load(); }
   const std::size_t max_size() const { return N; }
-  const std::size_t capacity() const { return N - size_.load(); }
+  const std::size_t remaining() const { return N - size_.load(); }
 
   bool push(const T &value) noexcept {
     if (is_full()) {
