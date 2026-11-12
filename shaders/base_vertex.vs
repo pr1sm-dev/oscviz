@@ -10,6 +10,8 @@ uniform float powerL;
 uniform float powerR;
 uniform float power;
 
+uniform sampler1D frequencyTexture;
+
 out float depth;
 
 void main() {
@@ -34,11 +36,21 @@ void main() {
         loudness = sqrt(powerR*powerR + exp(-40*pos.z)*powerL*powerL);
     }
 
-    vec3 offset = amplitude*loudness*sin(frequency*t + angularOffset*pos.x + verticalOffset*pos.z) * vec3(pos.x, pos.y, 0.0f);
-    offset = offset + (1+power)*(0.03*sin(frequency*0.25*t))*vec3(pos.x,pos.y,0.0f);
+    float index = (pos.z + 1.0) * 64;
+    float amp = texture(frequencyTexture, (index/256)).r;
+
+    // -40 to 0, need from 0 to 1
+    float movementAmount = (1.0/80.0) * amp + 1;
+
+    //vec3 offset = vec3(0, 0, 0);
+    //offset = amplitude * movementAmount * vec3(pos.x, pos.y, pos.z);
+
+    vec3 offset = amplitude*movementAmount*sin(frequency*t + angularOffset*pos.x + verticalOffset*pos.z) * vec3(pos.x, pos.y, pos.z);
+    //offset = offset + (1+power)*(0.03*sin(frequency*0.25*t))*vec3(pos.x,pos.y,0.0f);
     //vec3 offset = -loudness * vec3(pos.x, pos.y, 0.0f);
 
-    vec3 p = rotX * rotZ * (pos + offset);
+    //vec3 p = rotX * rotZ * (pos + offset);
+    vec3 p = rotX * (pos + offset);
     p.x *= 1080.0 / 1920.0;                     
 
     depth = p.z;

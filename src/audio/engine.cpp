@@ -168,7 +168,7 @@ void AudioEngine::Process(double currentTime) {
     newData = true;
   }
 
-  if (newData) {
+  if (newData && windowLeft_.size() == WINDOW_SIZE) {
     // Calculate new RMS values
     curLRms_ = 0;
     curRRms_ = 0;
@@ -198,7 +198,7 @@ void AudioEngine::Process(double currentTime) {
       freqRight_[i] = (4.0f / WINDOW_SIZE) * freqRight_[i];
 
       float amp = std::max(std::abs(freqLeft_[i]), std::abs(freqRight_[i]));
-      freqDB_[i] = 20 * std::log10(amp);
+      freqDB_[i] = std::max(20.0 * std::log10(amp), -80.0);
     }
   }
 }

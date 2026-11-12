@@ -36,7 +36,20 @@ int main() {
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void *)0);
   glEnableVertexAttribArray(0);
 
+  GLuint frequencyTexture;
+  glGenTextures(1, &frequencyTexture);
+  glBindTexture(GL_TEXTURE_1D, frequencyTexture);
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+
+  glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, WINDOW_SIZE, 0, GL_RED, GL_FLOAT,
+               nullptr);
+
   glEnable(GL_DEPTH_TEST);
+
+  s.Use();
+  s.SetInt("frequencyTexture", 0);
 
   double curLRms = 0.0;
   double curRRms = 0.0;
@@ -60,6 +73,11 @@ int main() {
 
     window::MeshVisualizerState meshState = window.GetMeshVisualizerState();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_1D, frequencyTexture);
+    glTexSubImage1D(GL_TEXTURE_1D, 0, 0, WINDOW_SIZE, GL_RED, GL_FLOAT,
+                    window.audioEngine.GetPlaybackFrequenciesDB().data());
 
     s.Use();
     s.SetFloat("time", time);
