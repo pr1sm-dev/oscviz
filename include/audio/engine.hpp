@@ -2,6 +2,7 @@
 
 #include "containers.hpp"
 #include <atomic>
+#include <complex>
 #include <miniaudio.h>
 #include <portaudio.h>
 #include <thread>
@@ -9,8 +10,9 @@
 #include <vector>
 
 #define RING_BUFFER_SIZE 8192
-#define FRAME_REPORT_SIZE 128
+#define FRAME_REPORT_SIZE 16
 #define FRAMES_PER_BLOCK 256
+#define WINDOW_SIZE 1024
 #define SAMPLE_RATE 48000
 
 namespace audio {
@@ -20,6 +22,8 @@ class AudioStreamWorker;
 struct AudioPlaybackReport {
   double lRms;
   double rRms;
+  int channels;
+  float data[FRAMES_PER_BLOCK * 2];
   double estimatedPlaybackAt;
 };
 struct AudioPlaybackThreadData {
@@ -68,6 +72,7 @@ enum class AudioFileStreamError {
 typedef RingBuffer<AudioPlaybackReport, FRAME_REPORT_SIZE>
     AudioPlaybackReportRingBuffer;
 typedef RingBuffer<float, RING_BUFFER_SIZE> AudioFileStreamRingBuffer;
+typedef OverwritingRingBuffer<float, WINDOW_SIZE> WindowSampleBuffer;
 
 /**
  * @brief Manages initialization and teardown of audio libraries, audio state
@@ -93,6 +98,8 @@ public:
   ~AudioEngine();
   AudioEngine(const AudioEngine &engine) = delete;
   AudioEngine &operator=(const AudioEngine &engine) = delete;
+
+  void Process(double currentTime);
 
   /**
    * @brief Returns the list of AudioDevices gathered during the class
@@ -177,6 +184,17 @@ public:
     return frameReportBuffer_;
   }
 
+  double GetCurrentLRms() const { return curLRms_; }
+  double GetCurrentRRms() const { return curRRms_; }
+
+  const std::vector<std::complex<float>> GetFrequencyWindowL() const {
+    return freqLeft_;
+  }
+  const std::vector<std::complex<float>> GetFrequencyWindowR() const {
+    return freqRight_;
+  }
+  const std::vector<float> GetPlaybackFrequenciesDB() const { return freqDB_; }
+
   /**
    * @brief Fetches the version reported by the portaudio library.
    */
@@ -196,6 +214,18 @@ private:
 
   bool engineInitialized_ = false;
   std::vector<AudioDevice> audioDevices_;
+
+  // TODO: break this into a struct?
+  WindowSampleBuffer windowLeft_;
+  WindowSampleBuffer windowRight_;
+
+  double curLRms_ = 0.0;
+  double curRRms_ = 0.0;
+
+  std::vector<std::complex<float>> freqLeft_;
+  std::vector<std::complex<float>> freqRight_;
+
+  std::vector<float> freqDB_;
 
   PaStream *audioStreamPtr_ = nullptr;
   const std::atomic<double> *currentTimePtr_;

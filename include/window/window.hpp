@@ -32,6 +32,7 @@ public:
   void ShowMeshModeWindow();
   void ShowAudioConfigWindow();
   void ProcessKey(int key, int scancode, int action, int mode);
+  void ProcessAudio();
   void RenderUIWindows();
 
   audio::RingBuffer<audio::AudioPlaybackReport, FRAME_REPORT_SIZE> &
@@ -50,8 +51,9 @@ public:
     curRRms_ = rRms;
   }
 
-private:
   audio::AudioEngine audioEngine;
+
+private:
   GLFWwindow *glfwWindow_;
   ImGuiIO *imguiIO_;
 

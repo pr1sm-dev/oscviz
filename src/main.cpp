@@ -41,8 +41,6 @@ int main() {
   double curLRms = 0.0;
   double curRRms = 0.0;
   double curRms = 0.0;
-  audio::AudioPlaybackReport lastFrameReport{
-      .lRms = 0.0, .rRms = 0.0, .estimatedPlaybackAt = 0.0};
 
   while (!glfwWindowShouldClose(window.GetGLFWWindow())) {
     // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -52,21 +50,13 @@ int main() {
 
     double time = glfwGetTime();
 
-    audio::RingBuffer<audio::AudioPlaybackReport, FRAME_REPORT_SIZE>
-        &frameReportBuffer = window.GetAudioFrameReportBuffer();
+    window.ProcessAudio();
 
-    while (!frameReportBuffer.empty() &&
-           frameReportBuffer.peek().estimatedPlaybackAt < time) {
-      audio::AudioPlaybackReport lastFrameReport;
-      frameReportBuffer.pop(lastFrameReport);
+    curLRms = window.audioEngine.GetCurrentLRms();
+    curRRms = window.audioEngine.GetCurrentRRms();
+    curRms = std::sqrt(0.5 * curLRms * curLRms + 0.5 * curRRms + curRRms);
 
-      curLRms = lastFrameReport.lRms;
-      curRRms = lastFrameReport.rRms;
-      curRms = 0.5 * std::sqrt(curLRms * curLRms + curRRms * curRRms);
-      // std::cout << "curRms=" << curRms << std::endl;
-
-      window.SetRMS(curRms, curLRms, curRRms);
-    }
+    window.SetRMS(curRms, curLRms, curRRms);
 
     window::MeshVisualizerState meshState = window.GetMeshVisualizerState();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

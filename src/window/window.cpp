@@ -176,10 +176,22 @@ void window::OscvizWindow::OscvizWindow::ShowAudioConfigWindow() {
     ImGui::Text("Current RMS L: %.2f | Current RMS R: %.2f", curLRms_,
                 curRRms_);
     ImGui::Text("Current RMS: %.2f", curRms_);
+
+    auto freqDomain = audioEngine.GetPlaybackFrequenciesDB();
+
+    for (int i = 0; i < WINDOW_SIZE / 2; i++) {
+      float amp = std::max(-40.0f, freqDomain[i]);
+      ImGui::Text("%.1f - %.2f", amp, (float(i) * SAMPLE_RATE / WINDOW_SIZE));
+    }
+
     break;
   }
 
   ImGui::End();
+}
+
+void window::OscvizWindow::ProcessAudio() {
+  audioEngine.Process(glfwGetTime());
 }
 
 void window::OscvizWindow::OscvizWindow::RenderUIWindows() {

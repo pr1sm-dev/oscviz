@@ -9,4 +9,6 @@ target_sources(oscviz_test PRIVATE
 )
 
 target_link_libraries(oscviz_test PRIVATE oscviz_core GTest::gtest_main portaudio)
+
+target_compile_options(oscviz_test PRIVATE)
 gtest_discover_tests(oscviz_test)

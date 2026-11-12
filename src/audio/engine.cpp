@@ -1,4 +1,5 @@
 #include "audio/engine.hpp"
+#include "audio/algorithms.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -9,7 +10,8 @@
 
 namespace audio {
 AudioEngine::AudioEngine(const std::atomic<double> *currentTimePtr)
-    : currentTimePtr_(currentTimePtr) {
+    : currentTimePtr_(currentTimePtr), freqLeft_(WINDOW_SIZE),
+      freqRight_(WINDOW_SIZE), freqDB_(WINDOW_SIZE) {
   PaError error = Pa_Initialize();
   if (error != paNoError) {
     std::cout << "ERROR: Could not initialize PortAudio, error code 0x"
@@ -145,6 +147,60 @@ std::vector<AudioDevice> getAudioDevices_() {
   }
 
   return devices;
+}
+
+void AudioEngine::Process(double currentTime) {
+  bool newData = false;
+  double fftLag = (double)WINDOW_SIZE / (double)SAMPLE_RATE;
+  // double fftLag = 0.0;
+
+  while (!frameReportBuffer_.empty() &&
+         frameReportBuffer_.peek().estimatedPlaybackAt < currentTime + fftLag) {
+    AudioPlaybackReport lastFrameReport;
+    frameReportBuffer_.pop(lastFrameReport);
+
+    // TODO: Fix reliance on two channels
+    for (int i = 0; i < FRAMES_PER_BLOCK; i++) {
+      windowLeft_.push(lastFrameReport.data[i * 2]);
+      windowRight_.push(lastFrameReport.data[i * 2 + 1]);
+    }
+
+    newData = true;
+  }
+
+  if (newData) {
+    // Calculate new RMS values
+    curLRms_ = 0;
+    curRRms_ = 0;
+    for (int i = 0; i < WINDOW_SIZE; i++) {
+      curLRms_ += windowLeft_[i] * windowLeft_[i];
+      curRRms_ += windowRight_[i] * windowRight_[i];
+    }
+    curLRms_ = std::sqrt(curLRms_ / WINDOW_SIZE);
+    curRRms_ = std::sqrt(curRRms_ / WINDOW_SIZE);
+
+    // Get frequency domain of the current windows
+    float lWindow[WINDOW_SIZE]{};
+    float rWindow[WINDOW_SIZE]{};
+
+    windowLeft_.copy(lWindow, windowLeft_.size());
+    windowRight_.copy(rWindow, windowRight_.size());
+
+    ApplyHannWindow(lWindow, WINDOW_SIZE);
+    ApplyHannWindow(rWindow, WINDOW_SIZE);
+
+    FastFourierTransform(lWindow, freqLeft_.data(), WINDOW_SIZE);
+    FastFourierTransform(rWindow, freqRight_.data(), WINDOW_SIZE);
+
+    // normalize the frequency data
+    for (int i = 0; i < WINDOW_SIZE; i++) {
+      freqLeft_[i] = (4.0f / WINDOW_SIZE) * freqLeft_[i];
+      freqRight_[i] = (4.0f / WINDOW_SIZE) * freqRight_[i];
+
+      float amp = std::max(std::abs(freqLeft_[i]), std::abs(freqRight_[i]));
+      freqDB_[i] = 20 * std::log10(amp);
+    }
+  }
 }
 
 int AudioEngine::GetPortAudioVersion() { return Pa_GetVersion(); }
@@ -331,10 +387,15 @@ int audioDeviceStreamCallback_(const void *inputBuffer, void *outputBuffer,
   double lRms = 0.0;
   double rRms = 0.0;
 
+  AudioPlaybackReport frameReport;
+
   if (framesToWrite > 0) {
     threadDataPtr->bufferPtr->read(outFrames, framesToWrite * 2);
 
     for (int i = 0; i < framesToWrite; i++) {
+      frameReport.data[2 * i] = outFrames[2 * i];
+      frameReport.data[2 * i + 1] = outFrames[2 * i + 1];
+
       lRms += outFrames[2 * i] * outFrames[2 * i];
       rRms += outFrames[2 * i + 1] * outFrames[2 * i + 1];
     }
@@ -347,8 +408,11 @@ int audioDeviceStreamCallback_(const void *inputBuffer, void *outputBuffer,
         threadDataPtr->durationPtr->load() +
         (timeInfo->outputBufferDacTime - timeInfo->currentTime);
 
-    AudioPlaybackReport frameReport = {
-        .lRms = lRms, .rRms = rRms, .estimatedPlaybackAt = expectedPlayAt};
+    frameReport.channels = 2;
+    frameReport.estimatedPlaybackAt = expectedPlayAt;
+    frameReport.lRms = lRms;
+    frameReport.rRms = rRms;
+
     threadDataPtr->frameReportBufferPtr->push(frameReport);
   }
 
