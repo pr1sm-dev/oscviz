@@ -29,6 +29,6 @@ void audio::FastFourierTransform(float *in, std::complex<float> *out,
 // if needed to optimize, could precompute the sine functions
 void audio::ApplyHannWindow(float *in, std::size_t count) {
   for (int i = 0; i < count; i++) {
-    in[i] *= std::sin(M_PI * i / count);
+    in[i] *= std::sin(M_PI * i / count) * std::sin(M_PI * i / count);
   }
 }

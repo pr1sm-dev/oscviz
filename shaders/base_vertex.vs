@@ -11,6 +11,7 @@ uniform float falloffRatio;
 uniform float powerL;
 uniform float powerR;
 uniform float power;
+uniform float maxMelVal;
 
 uniform sampler1D frequencyTexture;
 
@@ -38,7 +39,7 @@ void main() {
         loudness = sqrt(powerR*powerR + exp(-40*pos.z)*powerL*powerL);
     }
 
-    float melVal = 1381.0 * (pos.z + 1.0) + 78.0;
+    float melVal = maxMelVal / 2.0 * (pos.z + 1.0) + 78.0;
     float freqVal = 700.0 * (exp(melVal / 1127.0) - 1.0);
     float binIndex = freqVal * (1024.0/48000.0);
 
@@ -58,9 +59,10 @@ void main() {
     //vec3 offset = vec3(0, 0, 0);
     //vec3 offset = amplitude * movementAmount * vec3(pos.x, pos.y, pos.z);
 
-    vec3 offset = amplitude*movementAmount*sin(frequency*t + angularOffset*pos.x + verticalOffset*pos.z) * vec3(pos.x, pos.y, pos.z);
+    vec3 offset = 0*amplitude* 0.5* abs(sin(frequency*t + angularOffset*pos.x + verticalOffset*pos.z)) * vec3(pos.x,pos.y,pos.z);
+    offset += amplitude*movementAmount * vec3(pos.x, pos.y, pos.z);
     if (frequency == 0) {
-        offset = amplitude * movementAmount * vec3(pos.x, pos.y, pos.z);
+        //offset += amplitude * movementAmount * vec3(pos.x, pos.y, pos.z);
     }
     //offset = offset + (1+power)*(0.03*sin(frequency*0.25*t))*vec3(pos.x,pos.y,0.0f);
     //vec3 offset = -loudness * vec3(pos.x, pos.y, 0.0f);

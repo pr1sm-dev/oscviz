@@ -88,6 +88,7 @@ int main() {
     s.SetFloat("angularOffset", meshState.angularOffset);
     s.SetFloat("bfCenter", meshState.boostFrequencyCenter);
     s.SetFloat("falloffRatio", meshState.falloffRatio);
+    s.SetFloat("maxMelVal", meshState.maxMelVal);
     s.SetFloat("power", curRms);
     s.SetFloat("powerL", curLRms);
     s.SetFloat("powerR", curRRms);

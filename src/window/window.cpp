@@ -47,6 +47,7 @@ window::OscvizWindow::OscvizWindow(int width, int height,
   meshVisualizerState_.amplitude = 0.15f;
   meshVisualizerState_.boostFrequencyCenter = 160.0f;
   meshVisualizerState_.falloffRatio = 0.55f;
+  meshVisualizerState_.maxMelVal = 3266.0f;
 }
 
 window::OscvizWindow::~OscvizWindow() {
@@ -82,6 +83,8 @@ void window::OscvizWindow::ShowMeshModeWindow() {
                      &meshVisualizerState_.boostFrequencyCenter, 40.0, 320.0);
   ImGui::SliderFloat("Falloff Ratio", &meshVisualizerState_.falloffRatio, 0.1,
                      1);
+  ImGui::SliderFloat("Max Mel Val", &meshVisualizerState_.maxMelVal, 300.0f,
+                     3266.0f);
 
   ImGui::End();
 }
