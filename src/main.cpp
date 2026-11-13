@@ -14,7 +14,8 @@
 int main() {
   window::OscvizWindow window(1920, 1080, "oscviz");
 
-  Shader s("shaders/base_vertex.vs", "shaders/base_fragment.fs");
+  Shader s("shaders/base_vertex.vs", "shaders/base_fragment.fs",
+           "shaders/base_geometry.gs");
 
   Sphere sphere(1.0f, 128, 128);
 
@@ -93,7 +94,7 @@ int main() {
     s.SetFloat("powerL", curLRms);
     s.SetFloat("powerR", curRRms);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, sphere.GetIndices().size(), GL_UNSIGNED_INT,
                    0);

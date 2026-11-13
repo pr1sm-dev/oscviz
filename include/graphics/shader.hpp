@@ -8,7 +8,8 @@
 class Shader {
 public:
   Shader(const std::string &vertexShaderPath,
-         const std::string &fragmentShaderPath);
+         const std::string &fragmentShaderPath,
+         const std::string &geometryShaderPath);
 
   GLuint GetProgramId() { return programId_; }
 

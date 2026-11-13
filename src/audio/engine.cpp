@@ -32,6 +32,9 @@ AudioEngine::AudioEngine(const std::atomic<double> *currentTimePtr)
   // TODO: add proper check here, should be if there even is a current input
   // device
   startAudioStream_(currentOutputDevice_);
+
+  // flush the freq vector
+  freqDB_.assign(WINDOW_SIZE, -40);
 }
 
 AudioEngine::~AudioEngine() {

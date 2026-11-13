@@ -61,46 +61,67 @@ bool checkProgramLinking(GLuint programId) {
   return linkedSuccessfully;
 }
 
+// TODO: make geometry shader optional
 Shader::Shader(const std::string &vertexShaderPath,
-               const std::string &fragmentShaderPath) {
-  std::string vertexShaderSource, fragmentShaderSource;
+               const std::string &fragmentShaderPath,
+               const std::string &geometryShaderPath) {
+  std::string vertexShaderSource, fragmentShaderSource, geometryShaderSource;
 
   if (!readShaderToString(vertexShaderPath, vertexShaderSource)) {
     std::cout << "ERROR: Could not open vertex shader " << vertexShaderPath
               << std::endl;
     return;
   } else if (!readShaderToString(fragmentShaderPath, fragmentShaderSource)) {
-    std::cout << "ERROR: Could not open fragment shader " << fragmentShaderPath;
+    std::cout << "ERROR: Could not open fragment shader " << fragmentShaderPath
+              << std::endl;
+    return;
+  } else if (!readShaderToString(geometryShaderPath, geometryShaderSource)) {
+    std::cout << "ERROR: Could not open geometry shader " << geometryShaderPath
+              << std::endl;
+    return;
   }
 
   GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
   GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
+  GLuint geometryShaderId = glCreateShader(GL_GEOMETRY_SHADER);
 
   int compiled = 0;
 
   const char *vertexShaderSrc = vertexShaderSource.c_str();
   const char *fragmentShaderSrc = fragmentShaderSource.c_str();
+  const char *geometryShaderSrc = geometryShaderSource.c_str();
 
   glShaderSource(vertexShaderId, 1, &vertexShaderSrc, 0);
   glShaderSource(fragmentShaderId, 1, &fragmentShaderSrc, 0);
+  glShaderSource(geometryShaderId, 1, &geometryShaderSrc, 0);
 
   glCompileShader(vertexShaderId);
   glCompileShader(fragmentShaderId);
+  glCompileShader(geometryShaderId);
 
   if (!checkShaderCompilation(vertexShaderId)) {
     glDeleteShader(vertexShaderId);
     glDeleteShader(fragmentShaderId);
+    glDeleteShader(geometryShaderId);
     return;
   }
   if (!checkShaderCompilation(fragmentShaderId)) {
     glDeleteShader(vertexShaderId);
     glDeleteShader(fragmentShaderId);
+    glDeleteShader(geometryShaderId);
+    return;
+  }
+  if (!checkShaderCompilation(geometryShaderId)) {
+    glDeleteShader(vertexShaderId);
+    glDeleteShader(fragmentShaderId);
+    glDeleteShader(geometryShaderId);
     return;
   }
 
   GLuint programId = glCreateProgram();
   glAttachShader(programId, vertexShaderId);
   glAttachShader(programId, fragmentShaderId);
+  glAttachShader(programId, geometryShaderId);
 
   glLinkProgram(programId);
 
@@ -112,6 +133,7 @@ Shader::Shader(const std::string &vertexShaderPath,
 
   glDetachShader(programId, vertexShaderId);
   glDetachShader(programId, fragmentShaderId);
+  glDetachShader(programId, geometryShaderId);
 
   programId_ = programId;
 }

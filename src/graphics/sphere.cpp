@@ -8,6 +8,7 @@ Sphere::Sphere(float radius, int nOfLatitudes, int nOfLongitudes)
     return;
 
   int nOfVertices = (nOfLongitudes * nOfLatitudes) + 2;
+  int vertex = 0;
 
   // bottom point
   vertices_.push_back(0.0f);

@@ -40,14 +40,14 @@ window::OscvizWindow::OscvizWindow(int width, int height,
   glfwSetWindowUserPointer(glfwWindow_, this);
   glfwSetKeyCallback(glfwWindow_, window::OscvizWindow::GLFWKeyCallback);
 
-  meshVisualizerState_.tilt = 80.0f;
+  meshVisualizerState_.tilt = 95.0f;
   meshVisualizerState_.frequency = 16.0f;
   meshVisualizerState_.angularOffset = 0.0f;
   meshVisualizerState_.verticalOffset = 16.0f;
   meshVisualizerState_.amplitude = 0.15f;
   meshVisualizerState_.boostFrequencyCenter = 160.0f;
   meshVisualizerState_.falloffRatio = 0.55f;
-  meshVisualizerState_.maxMelVal = 3266.0f;
+  meshVisualizerState_.maxMelVal = 2800.0f;
 }
 
 window::OscvizWindow::~OscvizWindow() {
