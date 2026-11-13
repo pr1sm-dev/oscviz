@@ -10,7 +10,7 @@
 #include <vector>
 
 #define RING_BUFFER_SIZE 8192
-#define FRAME_REPORT_SIZE 16
+#define FRAME_REPORT_SIZE 256
 #define FRAMES_PER_BLOCK 256
 #define WINDOW_SIZE 1024
 #define SAMPLE_RATE 48000

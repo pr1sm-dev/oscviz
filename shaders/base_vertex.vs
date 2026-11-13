@@ -43,7 +43,7 @@ void main() {
     float freqVal = 700.0 * (exp(melVal / 1127.0) - 1.0);
     float binIndex = freqVal * (1024.0/48000.0);
 
-    float amp = texture(frequencyTexture, binIndex / 1024.0).r;
+    float amp = texture(frequencyTexture, (binIndex + 0.5) / 1024.0).r;
     float boost = 3 * (log(freqVal/bfCenter)) / log(2);
 
     amp += boost;
