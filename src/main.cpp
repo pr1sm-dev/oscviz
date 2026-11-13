@@ -39,8 +39,8 @@ int main() {
   GLuint frequencyTexture;
   glGenTextures(1, &frequencyTexture);
   glBindTexture(GL_TEXTURE_1D, frequencyTexture);
-  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 
   glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, WINDOW_SIZE, 0, GL_RED, GL_FLOAT,
@@ -86,6 +86,8 @@ int main() {
     s.SetFloat("frequency", meshState.frequency);
     s.SetFloat("verticalOffset", meshState.verticalOffset);
     s.SetFloat("angularOffset", meshState.angularOffset);
+    s.SetFloat("bfCenter", meshState.boostFrequencyCenter);
+    s.SetFloat("falloffRatio", meshState.falloffRatio);
     s.SetFloat("power", curRms);
     s.SetFloat("powerL", curLRms);
     s.SetFloat("powerR", curRRms);

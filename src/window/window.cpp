@@ -44,7 +44,9 @@ window::OscvizWindow::OscvizWindow(int width, int height,
   meshVisualizerState_.frequency = 16.0f;
   meshVisualizerState_.angularOffset = 0.0f;
   meshVisualizerState_.verticalOffset = 16.0f;
-  meshVisualizerState_.amplitude = 0.02f;
+  meshVisualizerState_.amplitude = 0.15f;
+  meshVisualizerState_.boostFrequencyCenter = 160.0f;
+  meshVisualizerState_.falloffRatio = 0.55f;
 }
 
 window::OscvizWindow::~OscvizWindow() {
@@ -76,6 +78,10 @@ void window::OscvizWindow::ShowMeshModeWindow() {
                      100.0f);
   ImGui::SliderFloat("Angular. Offset", &meshVisualizerState_.angularOffset,
                      0.0f, 100.0f);
+  ImGui::SliderFloat("Boost Freq Center",
+                     &meshVisualizerState_.boostFrequencyCenter, 40.0, 320.0);
+  ImGui::SliderFloat("Falloff Ratio", &meshVisualizerState_.falloffRatio, 0.1,
+                     1);
 
   ImGui::End();
 }

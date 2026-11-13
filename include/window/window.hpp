@@ -13,6 +13,8 @@ struct MeshVisualizerState {
   float frequency;
   float verticalOffset;
   float angularOffset;
+  float boostFrequencyCenter;
+  float falloffRatio;
 };
 
 const nfdu8filteritem_t SourceAudioDialogFilter[1] = {

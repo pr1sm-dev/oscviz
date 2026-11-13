@@ -6,6 +6,8 @@ uniform float amplitude;
 uniform float frequency;
 uniform float verticalOffset;
 uniform float angularOffset;
+uniform float bfCenter;
+uniform float falloffRatio;
 uniform float powerL;
 uniform float powerR;
 uniform float power;
@@ -36,21 +38,35 @@ void main() {
         loudness = sqrt(powerR*powerR + exp(-40*pos.z)*powerL*powerL);
     }
 
-    float index = (pos.z + 1.0) * 64;
-    float amp = texture(frequencyTexture, (index/256)).r;
+    float melVal = 1381.0 * (pos.z + 1.0) + 78.0;
+    float freqVal = 700.0 * (exp(melVal / 1127.0) - 1.0);
+    float binIndex = freqVal * (1024.0/48000.0);
+
+    float amp = texture(frequencyTexture, binIndex / 1024.0).r;
+    float boost = 3 * (log(freqVal/bfCenter)) / log(2);
+
+    amp += boost;
+    if (amp > 0) amp = 0;
+    //float index = (pos.z + 1.0) * 128;
+    //float amp = texture(frequencyTexture, index / 1024).r;
 
     // -40 to 0, need from 0 to 1
-    float movementAmount = (1.0/80.0) * amp + 1;
+    // exp((amp/10)*ln(1/2))
+    //float movementAmount = exp((0.69*amp/10.0));
+    float movementAmount = exp((log(falloffRatio)*-amp/10.0));
 
     //vec3 offset = vec3(0, 0, 0);
-    //offset = amplitude * movementAmount * vec3(pos.x, pos.y, pos.z);
+    //vec3 offset = amplitude * movementAmount * vec3(pos.x, pos.y, pos.z);
 
     vec3 offset = amplitude*movementAmount*sin(frequency*t + angularOffset*pos.x + verticalOffset*pos.z) * vec3(pos.x, pos.y, pos.z);
+    if (frequency == 0) {
+        offset = amplitude * movementAmount * vec3(pos.x, pos.y, pos.z);
+    }
     //offset = offset + (1+power)*(0.03*sin(frequency*0.25*t))*vec3(pos.x,pos.y,0.0f);
     //vec3 offset = -loudness * vec3(pos.x, pos.y, 0.0f);
 
-    //vec3 p = rotX * rotZ * (pos + offset);
-    vec3 p = rotX * (pos + offset);
+    vec3 p = rotX * rotZ * (pos + offset);
+    //vec3 p = rotX * (pos + offset);
     p.x *= 1080.0 / 1920.0;                     
 
     depth = p.z;
